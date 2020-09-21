@@ -219,6 +219,50 @@ def sample(p0, v0, a0, t, j, st):
 
     return sj, sa, sv, sp
 
+def sample_position(p0, v0, a0, t, j, st):
+    """
+    Given an initial state and an input switching sequence, compute the position
+    at a set of explicitly specified sample times.
+
+    Inputs:
+        p0, initial position,     shape=(N,)
+        v0, initial velocity,     shape=(N,)
+        a0, initial acceleration, shape=(N,)
+        t,  switch times, shape=(N,M)
+        j,  jerk,         shape=(N,M)
+        st, sample times, shape=(K,)
+    Outputs:
+        sp, position,     shape=(N,K)
+    """
+
+    n_axis = p0.size
+    n_switch = t.shape[1]
+
+    # Accurate states at exact switching times.
+    a, v, p = switch_states(p0, v0, a0, t, j)
+
+    if t.shape[1] > 1:
+        n_sample = st.size
+        sj = np.full((n_axis, n_sample), np.nan)
+        sa = np.full((n_axis, n_sample), np.nan)
+        sv = np.full((n_axis, n_sample), np.nan)
+        sp = np.full((n_axis, n_sample), np.nan)
+
+        # Samples
+        for n in range(n_axis):
+            for i in range(n_switch):
+                mask = t[n,i] <= st
+                dt = st[mask] - t[n,i]
+                sp[n,mask] = 1/6*j[n,i]*dt**3 + 1/2*a[n,i]*dt**2 + v[n,i]*dt + p[n,i]
+                sv[n,mask] = 1/2*j[n,i]*dt**2 +     a[n,i]*dt    + v[n,i]
+                sa[n,mask] =     j[n,i]*dt    +     a[n,i]
+                sj[n,mask] =     j[n,i]
+    else:
+        # No sampling needed for zero time solution.
+        sj, sa, sv, sp = j, a, v, p
+
+    return sj, sa, sv, sp
+
 def uniformly_sample(p0, v0, a0, t, j, dt):
     """
     Given an initial state and an input switching sequence, compute the full
@@ -245,3 +289,26 @@ def uniformly_sample(p0, v0, a0, t, j, dt):
     st = np.linspace(start_t, end_t, N)
     sj, sa, sv, sp = sample(p0, v0, a0, t, j, st)
     return st, sj, sa, sv, sp
+
+def uniformly_sample_position(p0, v0, a0, t, j, dt):
+    """
+    Given an initial state and an input switching sequence, compute the position
+    at uniformly spaced sample times with resolution no coarser than dt.
+
+    Inputs:
+        p0, initial position,     shape=(N,)
+        v0, initial velocity,     shape=(N,)
+        a0, initial acceleration, shape=(N,)
+        t,  switch times, shape=(N,M)
+        j,  jerk,         shape=(N,M)
+        dt, time resolution
+    Outputs:
+        st, times,        shape=(K,)
+        sp, position,     shape=(N,K)
+    """
+    start_t = t[:,0].min()  # Assume equal start and end times for each axis.
+    end_t = t[:,-1].max()
+    N = int(np.ceil((end_t-start_t)/dt)) + 1
+    st = np.linspace(start_t, end_t, N)
+    sp = sample_position(p0, v0, a0, t, j, st)
+    return st, sp
