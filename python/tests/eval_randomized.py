@@ -109,6 +109,22 @@ def test_to_nonzero_pv(n_dim, params, n_tests, ax):
     plot_2d_projection_many_mp(ax, mp)
     return n_failed
 
+def test_to_nonzero_a(n_dim, params, n_tests, ax):
+    p0 = np.round(np.random.uniform(-1, 1, (n_tests,n_dim)), decimal_places)
+    v0 = np.round(np.random.uniform(-1, 1, (n_tests,n_dim)), decimal_places)
+    a0 = np.round(np.random.uniform(-1, 1, (n_tests,n_dim)), decimal_places)
+    p1 = np.zeros((n_tests,n_dim))
+    v1 = np.zeros((n_tests,n_dim))
+    a1 = np.ones((n_tests,n_dim))
+    a1[:,1:] = -1
+    mp, sec = compute_many_mp(p0, v0, a0, p1, v1, a1, params)
+    print('\ntest_to_zero')
+    n_failed = sum(1 for m in mp if not m['is_valid'])
+    print(f'  failed: {n_failed/n_tests:5.1%}         ({n_failed}/{n_tests})')
+    print(f'   speed:  {sec*1000:.2f} ms/test')
+    plot_2d_projection_many_mp(ax, mp)
+    return n_failed
+
 def test_to_nonzero_pva(n_dim, params, n_tests, ax):
     p0 = np.round(np.random.uniform(-1, 1, (n_tests,n_dim)), decimal_places)
     v0 = np.round(np.random.uniform(-1, 1, (n_tests,n_dim)), decimal_places)
@@ -205,7 +221,7 @@ if __name__ == '__main__':
         'sync_w': False,
     }
 
-    fig, axes = plt.subplots(2, 2)
+    fig, axes = plt.subplots(3, 2)
     axes = axes.flatten()
 
     results = {}
@@ -218,12 +234,16 @@ if __name__ == '__main__':
     axes[1].set_title(f'To Nonzero P, Failed {n_failed}/{n_tests}')
     results['test_to_nonzero_p'] = n_failed
 
-    n_failed = test_to_nonzero_pv(n_dim, params, n_tests, axes[2])
-    axes[2].set_title(f'To Nonzero P-V, Failed {n_failed}/{n_tests}')
+    n_failed = test_to_nonzero_a(n_dim, params, n_tests, axes[2])
+    axes[2].set_title(f'To Nonzero A, Failed {n_failed}/{n_tests}')
+    results['test_to_nonzero_p'] = n_failed
+
+    n_failed = test_to_nonzero_pv(n_dim, params, n_tests, axes[3])
+    axes[3].set_title(f'To Nonzero P-V, Failed {n_failed}/{n_tests}')
     results['test_to_nonzero_pv'] = n_failed
 
-    n_failed = test_to_nonzero_pva(n_dim, params, n_tests, axes[3])
-    axes[3].set_title(f'To Nonzero P-V-A, Failed {n_failed}/{n_tests}')
+    n_failed = test_to_nonzero_pva(n_dim, params, n_tests, axes[4])
+    axes[4].set_title(f'To Nonzero P-V-A, Failed {n_failed}/{n_tests}')
     results['test_to_nonzero_pva'] = n_failed
 
     fig, axes = plt.subplots(2, 1)
