@@ -2,6 +2,7 @@ import numpy as np
 import numpy.ctypeslib as npct
 from ctypes import c_double, c_int32, c_bool
 import pathlib
+from collections import OrderedDict
 
 # Load the library, using numpy mechanisms.
 path = pathlib.Path(__file__).parent.parent.absolute() / "build"
@@ -84,14 +85,35 @@ def min_time_bvp(
     # necessarily appear in chronological order.
     t_list = []
     j_list = []
-    n_steps = 0
+
+    # Using unique.
+    # for i in range(n_dim):
+    #     mask = np.logical_not(np.isnan(t[i,:]))
+    #     (_, first_index, count) = np.unique(t[i,mask], return_index=True, return_counts=True)
+    #     last_index = first_index + count - 1
+    #     last_index.sort()
+    #     t_list.append(t[i,last_index])
+    #     j_list.append(j[i,last_index])
+
+    # Using sets.
+    # for i in range(n_dim):
+    #     mask = np.logical_not(np.isnan(t[i,:]))
+    #     t_masked =list(t[i, mask])
+    #     t_set = list(set(t[i, mask]))
+    #     first_index = np.array([t_masked.index(k) for k in t_set])
+    #     count = np.array([t_masked.count(k) for k in t_set])
+    #     last_index = first_index + count - 1
+    #     last_index.sort()
+    #     t_list.append(t[i,last_index])
+    #     j_list.append(j[i,last_index])
+
+    # Using dict.
     for i in range(n_dim):
         mask = np.logical_not(np.isnan(t[i,:]))
-        (_, first_index, count) = np.unique(t[i,mask], return_index=True, return_counts=True)
-        last_index = first_index + count - 1
-        last_index.sort()
-        t_list.append(t[i,last_index])
-        j_list.append(j[i,last_index])
+        d = OrderedDict(zip(t[i,mask], j[i,mask])) # Use normal dict in Python >= 3.7.
+        t_list.append(list(d.keys()))
+        j_list.append(list(d.values()))
+
     n_steps = max(len(tl) for tl in t_list)
     t_final = np.zeros((n_dim, n_steps))
     j_final = np.zeros((n_dim, n_steps))
